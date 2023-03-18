@@ -30,14 +30,11 @@ import java.util.stream.Collectors;
 @Service
 public class EmployeeServiceBean implements EmployeeService {
     private final EmployeeRepository employeeRepository;
-//    private final EmployeeMapper mapper;
     private final SmtpMailer smtpMailer;
 
     @Override
     public EmployeeReadDto createEmployee(EmployeeCreateDto createDto) {
-//        Employee employee = mapper.employeeCreateDtoToEmployee(createDto);
         Employee employee = EmployeeMapper.INSTANCE.employeeCreateDtoToEmployee(createDto);
-//        return mapper.employeeToEmployeeReadDTO(
         return EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(
                 employeeRepository.save(employee)
         );
