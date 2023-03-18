@@ -2,7 +2,11 @@ package com.example.demowithtests.service;
 
 import com.example.demowithtests.domain.Employee;
 import com.example.demowithtests.domain.Gender;
+import com.example.demowithtests.dto.employee.EmployeeCreateDto;
+import com.example.demowithtests.dto.employee.EmployeePutDto;
+import com.example.demowithtests.dto.employee.EmployeeReadDto;
 import com.example.demowithtests.repository.EmployeeRepository;
+import com.example.demowithtests.util.config.EmployeeMapper;
 import com.example.demowithtests.util.exception.*;
 import com.example.demowithtests.util.mail.SmtpMailer;
 import lombok.AllArgsConstructor;
@@ -26,50 +30,57 @@ import java.util.stream.Collectors;
 @Service
 public class EmployeeServiceBean implements EmployeeService {
     private final EmployeeRepository employeeRepository;
-
+//    private final EmployeeMapper mapper;
     private final SmtpMailer smtpMailer;
 
     @Override
-    public Employee create(Employee employee) {
-        return employeeRepository.save(employee);
+    public EmployeeReadDto createEmployee(EmployeeCreateDto createDto) {
+//        Employee employee = mapper.employeeCreateDtoToEmployee(createDto);
+        Employee employee = EmployeeMapper.INSTANCE.employeeCreateDtoToEmployee(createDto);
+//        return mapper.employeeToEmployeeReadDTO(
+        return EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(
+                employeeRepository.save(employee)
+        );
     }
 
     @Override
-    public List<Employee> getAll() {
-        log.info("getAll() Service - start:");
+    public List<EmployeeReadDto> getAll() {
+//        log.info("getAll() Service - start:");
         var employees = employeeRepository.findAll();
-        employees.stream().forEach(employee -> {
-            if (employee.getIsPrivate() == Boolean.TRUE || employee.getIsPrivate() == null)
-                hideEmployeeDetails(employee);
-        });
-        log.info("setEmployeePrivateFields() Service - end:  = size {}", employees.size());
-        return employees;
+        return employees.stream()
+//                .map(e -> mapper.employeeToEmployeeReadDTO(e))
+                .map(e -> EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(e))
+                .collect(Collectors.toList());
+//        log.info("setEmployeePrivateFields() Service - end:  = size {}", employees.size());
+
     }
 
-    private void hideEmployeeDetails(Employee employee) {
+    private EmployeeReadDto hideEmployeeDetails(EmployeeReadDto employee) {
         log.debug("setEmployeePrivateFields() Service - start: id = {}", employee.getId());
-        employee.setName("is hidden");
-        employee.setEmail("is hidden");
-        employee.setCountry("is hidden");
-        employee.setAddresses(null);
-        employee.setGender(null);
+        if (employee.getIsPrivate() == Boolean.TRUE || employee.getIsPrivate() == null) {
+            employee.setName("is hidden");
+            employee.setEmail("is hidden");
+            employee.setCountry("is hidden");
+            employee.setAddresses(null);
+            employee.setGender(null);
+        }
         log.debug("setEmployeePrivateFields() Service - end:  = employee {}", employee);
+        return employee;
     }
 
     @Override
-    public Page<Employee> getAllWithPagination(Pageable pageable) {
-        log.debug("getAllWithPagination() - start: pageable = {}", pageable);
-        Page<Employee> list = employeeRepository.findAll(pageable);
-        list.stream().forEach(employee -> {
-            if (employee.getIsPrivate() == Boolean.TRUE || employee.getIsPrivate() == null)
-                hideEmployeeDetails(employee);
-        });
-        log.debug("getAllWithPagination() - end: list = {}", list);
-        return list;
+    public Page<EmployeeReadDto> getAllWithPagination(Pageable pageable) {
+        Page<Employee> employees = employeeRepository.findAll(pageable);
+        Page<EmployeeReadDto> employeeReadDto = employees
+//                .map(e -> mapper.employeeToEmployeeReadDTO(e))
+//                .map(e -> mapper.INSTANCE)
+                .map(e -> EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(e))
+                .map(e -> hideEmployeeDetails(e));
+        return employeeReadDto;
     }
 
     @Override
-    public Employee getById(Integer id) {
+    public EmployeeReadDto getById(Integer id) {
         log.info("getById(Integer id) Service - start: id = {}", id);
         var employee = employeeRepository.findById(id)
                 .orElseThrow(() ->
@@ -87,7 +98,8 @@ public class EmployeeServiceBean implements EmployeeService {
         );
 
         log.info("getById(Integer id) Service - end:  = employee {}", employee);
-        return employee;
+//        return mapper.employeeToEmployeeReadDTO(employee);
+        return EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(employee);
     }
 
     private void changePrivateStatus(Employee employee) {
@@ -110,16 +122,20 @@ public class EmployeeServiceBean implements EmployeeService {
     }
 
     @Override
-    public Employee updateById(Integer id, Employee employee) {
+    public EmployeeReadDto updateById(Integer id, EmployeePutDto putDto) {
         return employeeRepository.findById(id)
                 .map(entity -> {
-                    entity.setName(employee.getName());
-                    entity.setEmail(employee.getEmail());
-                    entity.setCountry(employee.getCountry());
-                    entity.setIsDeleted(employee.getIsDeleted());
-                    return employeeRepository.save(entity);
+                    entity.setName(putDto.getName());
+                    entity.setEmail(putDto.getEmail());
+                    entity.setCountry(putDto.getCountry());
+//                    entity.setIsDeleted(putDto.getIsDeleted());
+                    Employee employee = employeeRepository.save(entity);
+//                    return mapper.employeeToEmployeeReadDTO(employee);
+                    return EmployeeMapper.INSTANCE.employeeToEmployeeReadDTO(employee);
+
                 })
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found with id = " + id));
+
     }
 
     @Override
@@ -267,7 +283,7 @@ public class EmployeeServiceBean implements EmployeeService {
                     .build());
         }
         employeeRepository.saveAll(employees);
-  }
+    }
 
     @Override
     public void massTestUpdate() {

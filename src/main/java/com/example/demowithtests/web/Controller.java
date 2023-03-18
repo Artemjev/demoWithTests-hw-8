@@ -2,10 +2,10 @@ package com.example.demowithtests.web;
 
 import com.example.demowithtests.domain.Employee;
 import com.example.demowithtests.domain.Gender;
-import com.example.demowithtests.dto.EmployeeReadDto;
-import com.example.demowithtests.dto.employee.EmployeeDto;
+import com.example.demowithtests.dto.employee.EmployeePutDto;
+import com.example.demowithtests.dto.employee.EmployeeReadDto;
+import com.example.demowithtests.dto.employee.EmployeeCreateDto;
 import com.example.demowithtests.service.EmployeeService;
-import com.example.demowithtests.util.config.EmployeeMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -33,8 +33,7 @@ import java.util.Optional;
 @Tag(name = "Employee", description = "Employee API")
 public class Controller {
     private final EmployeeService employeeService;
-//    private final EmployeeConverter converter;
-    private final EmployeeMapper mapper;
+//    private final EmployeeMapper mapper;
 
     //Операция сохранения юзера в базу данных
     @PostMapping("/users")
@@ -45,23 +44,24 @@ public class Controller {
             @ApiResponse(responseCode = "400", description = "Invalid input"),
             @ApiResponse(responseCode = "404", description = "NOT FOUND. Specified employee request not found."),
             @ApiResponse(responseCode = "409", description = "Employee already exists")})
-    public EmployeeDto saveEmployee(@RequestBody @Valid EmployeeDto requestForSave) {
-        var employee = mapper.employeeDTOToEmployee(requestForSave);
-        var employeeDto = mapper.employeeToEmployeeDTO(employeeService.create(employee));
-        return employeeDto;
+    public EmployeeReadDto createEmployee(@RequestBody @Valid EmployeeCreateDto createDto) {
+//        var employee = mapper.employeeDTOToEmployee(createDto);
+//        var employeeDto = mapper.employeeToEmployeeDTO(employeeService.create(employee));
+        return employeeService.createEmployee(createDto);
+
     }
 
     //Получение списка юзеров
     @GetMapping("/users")
     @ResponseStatus(HttpStatus.OK)
-    public List<Employee> getAllUsers() {
+    public List<EmployeeReadDto> getAllUsers() {
         return employeeService.getAll();
     }
 
     @GetMapping("/users/p")
     @ResponseStatus(HttpStatus.OK)
-    public Page<Employee> getPage(@RequestParam(defaultValue = "0") int page,
-                                  @RequestParam(defaultValue = "5") int size
+    public Page<EmployeeReadDto> getPage(@RequestParam(defaultValue = "0") int page,
+                                         @RequestParam(defaultValue = "5") int size
     ) {
         Pageable paging = PageRequest.of(page, size);
         return employeeService.getAllWithPagination(paging);
@@ -77,22 +77,15 @@ public class Controller {
             @ApiResponse(responseCode = "404", description = "NOT FOUND. Specified employee request not found."),
             @ApiResponse(responseCode = "409", description = "Employee already exists")})
     public EmployeeReadDto getEmployeeById(@PathVariable Integer id) {
-        log.debug("getEmployeeById() Controller - start: id = {}", id);
-
-        var employee = employeeService.getById(id);
-
-        log.debug("getById() Controller - to employeeReadDto start: id = {}", id);
-        var employeeReadDto = mapper.employeeToEmployeeReadDTO(employee);
-        log.debug("getEmployeeById() Controller - end: name = {}", employeeReadDto.getName());
+        EmployeeReadDto employeeReadDto = employeeService.getById(id);
         return employeeReadDto;
     }
 
     //Обновление юзера
     @PutMapping("/users/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public Employee refreshEmployee(@PathVariable("id") Integer id, @RequestBody Employee employee) {
-
-        return employeeService.updateById(id, employee);
+    public EmployeeReadDto refreshEmployee(@PathVariable("id") Integer id, @RequestBody EmployeePutDto putDto) {
+        return employeeService.updateById(id, putDto);
     }
 
     //Удаление по id
@@ -226,6 +219,7 @@ public class Controller {
         System.err.println(Duration.between(timeStart, timeStop).toMillis());
         return Duration.between(timeStart, timeStop).toMillis();
     }
+
     //---------------------------------------------------------------------------------------
     @PutMapping("/users/mass-test-update")
     @ResponseStatus(HttpStatus.OK)
@@ -242,6 +236,7 @@ public class Controller {
         System.err.println(Duration.between(timeStart, timeStop).toMillis());
         return Duration.between(timeStart, timeStop).toMillis();
     }
+
     //---------------------------------------------------------------------------------------
     @PatchMapping("/users/mass-test-update")
     @ResponseStatus(HttpStatus.OK)
